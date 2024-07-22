@@ -44,6 +44,7 @@ class SocketServer:
     def sio_register(self, sid, data):
         print(f'{sid} register {data}')
         self.models[data['model_id']] = sid
+        self.sio.emit('registered', data=data['model_id'], to=sid)
         
     def sio_generate_finish(self, sid, data):
         print(f'{sid} generate {data}')
