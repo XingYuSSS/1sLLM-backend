@@ -3,10 +3,9 @@
 <p style="text-align: center;">
     <a href="https://github.com/XingYuSSS"><img src="https://img.shields.io/badge/Github-XingYuSSS-blue?logo=github" /></a>
     <a href="https://github.com/yulinlp"><img src="https://img.shields.io/badge/Github-yulinlp-blue?logo=github" /></a>
-    <a href="https://github.com/XingYuSSS/1sLLM-frontend"><img src="https://img.shields.io/badge/link-frontend-green
-    ?logo=github" /></a>
-    <a href="https://github.com/XingYuSSS/1sLLM-backend"><img src="https://img.shields.io/badge/link-backend-purple
-    ?logo=github" /></a>
+    <a href="https://github.com/XingYuSSS/1sLLM-backend/tree/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-brown.svg" alt="version"></a>
+    <a href="https://github.com/XingYuSSS/1sLLM-frontend"><img src="https://img.shields.io/badge/link-frontend-green?logo=github" /></a>
+    <a href="https://github.com/XingYuSSS/1sLLM-backend"><img src="https://img.shields.io/badge/link-backend-purple?logo=github" /></a>
     <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
