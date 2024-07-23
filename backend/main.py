@@ -34,6 +34,7 @@ class WebSever:
         self.app.add_url_rule('/chat/title', view_func=self.chat_title)
         self.app.add_url_rule('/chat/del', view_func=self.chat_del)
         self.app.add_url_rule('/chat/gen', view_func=self.chat_gen)
+        self.app.add_url_rule('/chat/gen/stream', view_func=self.chat_gen_stream)
         # self.app.add_url_rule('/chat/regen', view_func=self.chat_regen)
         self.app.add_url_rule('/chat/sel', view_func=self.chat_sel)
 
@@ -253,6 +254,11 @@ class WebSever:
             chat.sel_recv_msg(responses[0]['model'])
         user.add_chat(chat)
         return json.dumps(recv_msg_list, default=lambda o: o.__dict__()), 200
+
+    def chat_gen_stream(self):
+        print(self.socket_server.models)
+        stream = self.socket_server.generate_stream('1', [{'role': 'user', 'content': '1213'}], 'test')
+        return Response(stream, 200)
 
     def chat_sel(self):
         """

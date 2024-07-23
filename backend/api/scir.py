@@ -10,8 +10,12 @@ class SocketServer:
         self.sio.on('disconnect', self.sio_disconnect)
         self.sio.on('register', self.sio_register)
         self.sio.on('generate_finish', self.sio_generate_finish)
+        self.sio.on('generate_streaming', self.sio_generate_streaming)
+        self.sio.on('generate_stream_finish', self.sio_generate_stream_finish)
         self.models = {}
         self.response_tmp = {}
+        self.stream_tmp = {}
+        self.stream_finish = []
 
     def get_wgsiapp(self, wgsiapp):
         return socketio.WSGIApp(self.sio, wgsiapp)
@@ -20,14 +24,24 @@ class SocketServer:
         sid = self.models[model_id]
         gen_id = f'{sid}{cid}{time.time()}'
         self.sio.emit('generate', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
-        while True:
-            if gen_id not in self.response_tmp.keys():
-                continue
-            result = self.response_tmp[gen_id]
-            print(result)
-            del self.response_tmp[gen_id]
-            break
+        while gen_id not in self.response_tmp.keys():
+            time.sleep(0.1)
+        result = self.response_tmp[gen_id]
+        print(result)
+        del self.response_tmp[gen_id]
         return result
+
+    def generate_stream(self, cid, msg_list, model_id):
+        sid = self.models[model_id]
+        gen_id = f'{sid}{cid}{time.time()}'
+        self.sio.emit('generate_stream', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
+        while gen_id not in self.stream_finish:
+            if gen_id not in self.stream_tmp.keys():
+                continue
+            trunk = self.stream_tmp[gen_id]
+            del self.stream_tmp[gen_id]
+            yield trunk
+        self.stream_finish.remove(gen_id)
 
     @staticmethod
     def sio_connect(sid, environ):
@@ -49,7 +63,14 @@ class SocketServer:
     def sio_generate_finish(self, sid, data):
         print(f'{sid} generate {data}')
         self.response_tmp[data['gen_id']] = data['response']
-    
+
+    def sio_generate_streaming(self, sid, data):
+        self.stream_tmp[data['gen_id']] = data['response']
+
+    def sio_generate_stream_finish(self, sid, data):
+        print(f'{sid} generate stream finish {data}')
+        self.stream_finish.append(data['gen_id'])
+
 class Scir_Api(Api):
     server = SocketServer()
 
