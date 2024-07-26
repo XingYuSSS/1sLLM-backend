@@ -92,10 +92,12 @@ class Api(metaclass=LockAndSubclassTrackingMeta):
     
     @staticmethod
     def get_responses_stream(chat, provider_models, provider_keys):
-        # TODO: 优化多线程
+        streams = []
         for provider, model_list in provider_models.items():
-            yield from Api._get_responses_stream(chat, provider, model_list, provider_keys.get(provider, ''))
-    
+            streams.extend(Api._get_responses_stream(chat, provider, model_list, provider_keys.get(provider, '')))
+            merged_stream = merge_iterators(streams)
+        yield from merged_stream
+        
     @staticmethod
     def _get_responses_stream(chat, provider: str, model_list, api_key):
         if provider not in Api.get_providers():
@@ -112,8 +114,7 @@ class Api(metaclass=LockAndSubclassTrackingMeta):
         for model_id in model_list:
             iterator = api._get_response_stream(chat, model_id)
             iterators.append(iterator)
-
-        yield from merge_iterators(iterators)
+        return iterators
 
     @staticmethod
     def get_socket_server():

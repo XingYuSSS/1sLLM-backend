@@ -58,8 +58,8 @@ class Qwen_Api(Api):
                 messages=msg_list,
                 stream=True
             )
-            iterator = [{'model': model_id, 'code': 1, 'message': chunk.choices[0].delta.content} for chunk in chunks]
+            for chunk in chunks:
+                yield {'model': model_id, 'code': 1, 'message': chunk.choices[0].delta.content}
         except Exception as e:
             print(e)
-            iterator = [{'model': model_id, 'code': 0, 'message': str(e)}]
-        return iterator
+            yield {'model': model_id, 'code': 0, 'message': str(e)}

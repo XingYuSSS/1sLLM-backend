@@ -274,26 +274,32 @@ class WebSever:
         send_msg = data.Message('user', user.get_username(), prompt)
         chat.add_msg(send_msg)
         stream = Api.get_responses_stream(chat, provider_models, user.get_api_dict())
-        # 保存流
-        print(stream)
-        responses = {}
-        for chunk in stream:
-            print(chunk)
-            if chunk['model'] not in responses:
-                responses[chunk['model']] = {}
-                responses[chunk['model']]["message"] = ""
-                responses[chunk['model']]["codes"] = []
-            responses[chunk['model']]["codes"].append(chunk['code'])
-            responses[chunk['model']]["message"] += chunk['message']
-        # print(responses)
-        for model_name, response in responses.items():
-            recv_msg = data.Message('assistant', model_name, response['message'], all(response['codes']))
-            chat.add_recv_msg(model_name, recv_msg)
-        # TODO: 选择答复
-        if len(responses) == 1:
-            chat.sel_recv_msg(list(responses.keys())[0])
-        user.add_chat(chat)
-        return Response(stream, 200)
+
+        def res():
+            responses = {}
+            for chunk in stream:            
+                yield json.dumps(chunk, default=lambda o: o.__dict__())
+                
+                if chunk['model'] not in responses:
+                    responses[chunk['model']] = {
+                        "message": "",
+                        "codes": []
+                    }
+                
+                responses[chunk['model']]["codes"].append(chunk['code'])
+                responses[chunk['model']]["message"] += chunk['message']
+
+            # 保存流
+            print(responses)
+            for model in responses:
+                recv_msg = data.Message('assistant', model, responses[model]["message"], responses[model]["codes"])
+                chat.add_recv_msg(model, recv_msg)
+            user.add_chat(chat)
+            if len(responses) == 1:
+                chat.sel_recv_msg(list(responses.keys())[0])
+
+        return Response(res(), 200, mimetype='text/event-stream')
+
 
     def chat_sel(self):
         """
