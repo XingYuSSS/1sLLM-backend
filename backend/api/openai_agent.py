@@ -14,6 +14,9 @@ class OpenAI_agent_Api(Api):
         )
     
     def _list_models(self):
+        if self.api_key is None:
+            return []
+        
         conn = http.client.HTTPSConnection(
             "api.chatanywhere.tech",
             context=ssl.create_default_context(cafile=certifi.where())
@@ -42,3 +45,17 @@ class OpenAI_agent_Api(Api):
             print(e)
             data = {'model': model_id, 'code': 0, 'message': str(e)}
         return data
+
+    def _get_response_stream(self, chat, model_id):
+        try:
+            msg_list = [msg.to_role_dict() for msg in chat.get_msg_list()]
+            chunks = self.client.chat.completions.create(
+                model=model_id,
+                messages=msg_list,
+                stream=True
+            )
+            iterator = [{'model': model_id, 'code': 1, 'message': chunk.choices[0].delta.content} for chunk in chunks]
+        except Exception as e:
+            print(e)
+            iterator = [{'model': model_id, 'code': 0, 'message': str(e)}]
+        return iterator

@@ -84,3 +84,7 @@ class Scir_Api(Api):
     def _get_response(self, chat, model_id):
         msg_list = [msg.to_role_dict() for msg in chat.get_msg_list()]
         return self.server.generate(chat.get_chat_id(), msg_list, model_id)
+
+    def _get_response_stream(self, chat, model_id):
+        msg_list = [msg.to_role_dict() for msg in chat.get_msg_list()]
+        return self.server.generate_stream(chat.get_chat_id(), msg_list, model_id)

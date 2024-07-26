@@ -256,8 +256,43 @@ class WebSever:
         return json.dumps(recv_msg_list, default=lambda o: o.__dict__()), 200
 
     def chat_gen_stream(self):
-        print(self.socket_server.models)
-        stream = self.socket_server.generate_stream('1', [{'role': 'user', 'content': '1213'}], 'test')
+        '''
+        生成聊天内容流.
+        '''
+        user = self.server.get_user(session.get('username'), session.get('session_id'))
+        if user is None:
+            return json.dumps('invalid_user'), 403
+        chat = self.server.get_chat(user, base64.b64decode(
+            request.args.get('cid')).decode('utf-8'))
+        if chat is None:
+            return json.dumps('invalid_chat_id'), 403
+        prompt = base64.b64decode(request.args.get('p')).decode('utf-8')
+        if prompt is None:
+            return json.dumps('invalid_prompt'), 403
+        provider_models = json.loads(base64.b64decode(
+            request.args.get('provider_models')).decode('utf-8'))
+        send_msg = data.Message('user', user.get_username(), prompt)
+        chat.add_msg(send_msg)
+        stream = Api.get_responses_stream(chat, provider_models, user.get_api_dict())
+        # 保存流
+        print(stream)
+        responses = {}
+        for chunk in stream:
+            print(chunk)
+            if chunk['model'] not in responses:
+                responses[chunk['model']] = {}
+                responses[chunk['model']]["message"] = ""
+                responses[chunk['model']]["codes"] = []
+            responses[chunk['model']]["codes"].append(chunk['code'])
+            responses[chunk['model']]["message"] += chunk['message']
+        # print(responses)
+        for model_name, response in responses.items():
+            recv_msg = data.Message('assistant', model_name, response['message'], all(response['codes']))
+            chat.add_recv_msg(model_name, recv_msg)
+        # TODO: 选择答复
+        if len(responses) == 1:
+            chat.sel_recv_msg(list(responses.keys())[0])
+        user.add_chat(chat)
         return Response(stream, 200)
 
     def chat_sel(self):
