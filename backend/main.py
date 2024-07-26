@@ -277,8 +277,10 @@ class WebSever:
         # 保存流
         print(stream)
         responses = {}
+        s = []
         for chunk in stream:
             print(chunk)
+            s.append(json.dumps(chunk))
             if chunk['model'] not in responses:
                 responses[chunk['model']] = {}
                 responses[chunk['model']]["message"] = ""
@@ -293,7 +295,11 @@ class WebSever:
         if len(responses) == 1:
             chat.sel_recv_msg(list(responses.keys())[0])
         user.add_chat(chat)
-        return Response(stream, 200)
+        def res():
+            for t in s:
+                time.sleep(0.1)
+                yield t
+        return Response(res(), 200, mimetype='text/event-stream')
 
     def chat_sel(self):
         """
