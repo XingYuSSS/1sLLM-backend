@@ -26,21 +26,21 @@ class SocketServer:
         self.sio.emit('generate', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
         while gen_id not in self.response_tmp.keys():
             time.sleep(0.1)
-        result = self.response_tmp[gen_id]
+        result = self.response_tmp.pop(gen_id)
         print(result)
-        del self.response_tmp[gen_id]
         return result
 
     def generate_stream(self, cid, msg_list, model_id):
         sid = self.models[model_id]
         gen_id = f'{sid}{cid}{time.time()}'
+        self.stream_tmp[gen_id] = []
         self.sio.emit('generate_stream', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
-        while gen_id not in self.stream_finish:
-            if gen_id not in self.stream_tmp.keys():
+        while gen_id not in self.stream_finish or len(self.stream_tmp[gen_id]) > 0:
+            if len(self.stream_tmp[gen_id]) == 0:
                 continue
-            trunk = self.stream_tmp[gen_id]
-            del self.stream_tmp[gen_id]
+            trunk = self.stream_tmp[gen_id].pop(0)
             yield trunk
+        self.stream_tmp.pop(gen_id)
         self.stream_finish.remove(gen_id)
 
     @staticmethod
@@ -65,7 +65,7 @@ class SocketServer:
         self.response_tmp[data['gen_id']] = data['response']
 
     def sio_generate_streaming(self, sid, data):
-        self.stream_tmp[data['gen_id']] = data['response']
+        self.stream_tmp[data['gen_id']].append(data['response'])
 
     def sio_generate_stream_finish(self, sid, data):
         print(f'{sid} generate stream finish {data}')
