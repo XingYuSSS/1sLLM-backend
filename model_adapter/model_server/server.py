@@ -38,7 +38,7 @@ class ModelProvider:
         iterator = self.generate_stream(data['msg_list'])
         for i in iterator:
             trunk = {'model': self.model_id, 'code': 1, 'message': i}
-            self.sio.emit('generate_streaming', data={'gen_id': data['gen_id'], 'response': i})
+            self.sio.emit('generate_streaming', data={'gen_id': data['gen_id'], 'response': trunk})
         self.sio.emit('generate_stream_finish', data={'gen_id': data['gen_id']})
 
     def generate_fn(self, msg_list) -> str:
