@@ -95,7 +95,7 @@ class Api(metaclass=LockAndSubclassTrackingMeta):
         streams = []
         for provider, model_list in provider_models.items():
             streams.extend(Api._get_responses_stream(chat, provider, model_list, provider_keys.get(provider, '')))
-            merged_stream = merge_iterators(streams)
+        merged_stream = merge_iterators(streams)
         yield from merged_stream
         
     @staticmethod

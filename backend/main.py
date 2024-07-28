@@ -278,7 +278,7 @@ class WebSever:
         def res():
             responses = {}
             for chunk in stream:            
-                yield json.dumps(chunk, default=lambda o: o.__dict__())
+                yield json.dumps(chunk, default=lambda o: o.__dict__())+'\n'
                 
                 if chunk['model'] not in responses:
                     responses[chunk['model']] = {
@@ -297,8 +297,12 @@ class WebSever:
             user.add_chat(chat)
             if len(responses) == 1:
                 chat.sel_recv_msg(list(responses.keys())[0])
-
-        return Response(res(), 200, mimetype='text/event-stream')
+        headers = {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+        }
+        return Response(res(), 200, headers=headers)
 
 
     def chat_sel(self):
