@@ -1,15 +1,22 @@
 import random
 import string
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
 class MongoInviteCodeManager:
-    def __init__(self, db_name='invite_db', collection_name='invite_codes', default_length=8):
-        # 连接到MongoDB
-        self.client = MongoClient('mongodb://localhost:27017/')
+    def __init__(self, db_name='1sLLM', collection_name='invite_codes', default_length=8):
+        load_dotenv()
+        username = os.getenv('MONGO_USERNAME')
+        password = os.getenv('MONGO_PASSWORD')
+        host = os.getenv('MONGO_HOST')
+        port = os.getenv('MONGO_PORT')
+        uri = f"mongodb://{username}:{password}@{host}:{port}"
+
+        self.client = MongoClient(uri)
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
         self.default_length = default_length
-        # 确保索引的唯一性
         self.collection.create_index('code', unique=True)
     
     def __generate_code(self, length=None):
