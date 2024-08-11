@@ -73,6 +73,8 @@ class WebSever:
             return json.dumps('invalid_invite_code'), 200
         elif self.invite_code_manager.validate_code(invite_code) == -1:
             return json.dumps('used_invite_code'), 200
+        else:
+            self.invite_code_manager.mark_code_as_used(invite_code)
         password = base64.b64decode(request.args.get('pd')).decode('utf-8')
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
         user = data.User(username, password_md5)
@@ -329,6 +331,8 @@ class WebSever:
         chat.sel_recv_msg(model_name)
         return json.dumps('success'), 200
 
+ws = WebSever()
+app = ws.app
 if __name__ == '__main__':
     # 启动服务器
     ws = WebSever()

@@ -4,7 +4,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 
-class MongoInviteCodeManager:
+class InviteCodeManager:
     def __init__(self, db_name='1sLLM', collection_name='invite_codes', default_length=8):
         load_dotenv()
         username = os.getenv('MONGO_USERNAME')
@@ -89,7 +89,7 @@ def menu():
     print("6. 退出")
 
 def main():
-    manager = MongoInviteCodeManager()
+    manager = InviteCodeManager()
     
     while True:
         menu()
