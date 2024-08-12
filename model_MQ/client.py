@@ -1,6 +1,7 @@
 import json
 from typing import Generator
 from abc import ABC, abstractmethod
+import time
 
 import redis
 
@@ -33,7 +34,7 @@ class StreamGroupProducer():
         self.client = redis_client
         self.stream_name = stream_name
         self.group_name = group_name
-        if all(info['name'] !=group_name for info in self.client.xinfo_groups(stream_name)):
+        if not self.client.exists(stream_name) or all(info['name'] !=group_name for info in self.client.xinfo_groups(stream_name)):
             self.client.xgroup_create(stream_name, group_name, mkstream=True) 
 
     def send(self, message):
@@ -45,14 +46,14 @@ class StreamGroupProducer():
 
 
 class StreamGroupConsumer():
-    def __init__(self, redis_client: redis.Redis, stream_name, consumer_name, group_name='default') -> None:
+    def __init__(self, redis_client: redis.Redis, stream_name, consumer_name=None, group_name='default') -> None:
         self.client = redis_client
         self.stream_name = stream_name
-        self.consumer_name = consumer_name
+        self.consumer_name = consumer_name if consumer_name is not None else str(time.time())
         self.group_name = group_name
-        if all(info['name'] !=group_name for info in self.client.xinfo_groups(stream_name)):
+        if not self.client.exists(stream_name) or all(info['name'] !=group_name for info in self.client.xinfo_groups(stream_name)):
             self.client.xgroup_create(stream_name, group_name, mkstream=True) 
-        self.client.xgroup_createconsumer(stream_name, group_name, consumer_name)
+        self.client.xgroup_createconsumer(stream_name, group_name, self.consumer_name)
 
     def read(self, count=1, block=None):
         result = self.client.xreadgroup(self.group_name, self.consumer_name, {self.stream_name: '>'}, count=count, block=block)
@@ -68,7 +69,7 @@ class StreamGroupConsumer():
 
 
 class ModelProvider(ABC):
-    def __init__(self, model_id, redis_host, redis_port, redis_db, redis_password, node_id):
+    def __init__(self, model_id, redis_host, redis_port, redis_db, redis_password, node_id=None):
         self.model_id = model_id
         self.node_id = node_id
         self.redis_client = redis.Redis(
