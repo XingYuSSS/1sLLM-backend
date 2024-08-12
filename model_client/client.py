@@ -1,14 +1,17 @@
 import socketio
 import time
 from typing import Generator
+from abc import ABC, abstractmethod
 
-class ModelProvider:
+class ModelProvider(ABC):
     def __init__(self, model_id, server_url='http://localhost:8000', debug=False):
         self.sio = socketio.Client(logger=debug, engineio_logger=debug)
         self.server_url = server_url
         self.model_id = model_id
+        self.max_workers = 10
+        self.accept_list = []
         self._setup_events()
-        self.sio.connect(self.server_url)
+        self.sio.connect(self.server_url, transports=['websocket'])
 
     def _setup_events(self):
         self.sio.on('connect', self._on_connect)
@@ -28,15 +31,24 @@ class ModelProvider:
         print(f"Registered response: {data}")
 
     def _on_generate(self, data):
+        while len(self.accept_list) > self.max_workers:
+            continue
+        self.accept_list.append(data['gen_id'])
         result = self.generate_fn(data['msg_list'])
         response = {'model': self.model_id, 'code': 1, 'message': result}
+        self.accept_list.remove(data['gen_id'])
         self.sio.emit('generate_finish', data={'gen_id': data['gen_id'], 'response': response})
 
     def _on_generate_stream(self, data):
+        while len(self.accept_list) > self.max_workers:
+            continue
+        self.accept_list.append(data['gen_id'])
+        print(self.accept_list)
         iterator = self.generate_stream(data['msg_list'])
         for i in iterator:
             trunk = {'model': self.model_id, 'code': 1, 'message': i}
             self.sio.emit('generate_streaming', data={'gen_id': data['gen_id'], 'response': trunk})
+        self.accept_list.remove(data['gen_id'])
         self.sio.emit('generate_stream_finish', data={'gen_id': data['gen_id']})
 
     def generate_fn(self, msg_list) -> str:
@@ -50,6 +62,7 @@ class ModelProvider:
             result += i
         return result
 
+    @abstractmethod
     def generate_stream(self, msg_list) -> Generator[str, None, None]:
         """
         Generate response based on the message list.

@@ -118,8 +118,8 @@ class Api(metaclass=LockAndSubclassTrackingMeta):
 
     @staticmethod
     def get_socket_server():
-        if "Scir" in Api.get_providers():
-            return importlib.import_module('api.scir').Scir_Api.server
+        if "Scir_socket" in Api.get_providers():
+            return importlib.import_module('api.scir_socket').Scir_socket_Api.server
 
     def _list_models(self):
         """

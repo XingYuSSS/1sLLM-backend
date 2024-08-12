@@ -1,8 +1,9 @@
 import socketio
 import time
 import eventlet
+from abc import ABC, abstractmethod
 
-class ModelProvider:
+class ModelProvider(ABC):
     def __init__(self, model_id, server_url='0.0.0.0:7081', debug=False):
         self.sio = socketio.Server(cors_allowed_origins='*', logger=debug, engineio_logger=debug)
         self.model_id = model_id
@@ -52,6 +53,7 @@ class ModelProvider:
             result += i
         return result
 
+    @abstractmethod
     def generate_stream(self, msg_list) -> Generator[str, None, None]:
         """
         Generate response based on the message list.

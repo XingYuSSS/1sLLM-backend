@@ -1,90 +1,54 @@
 from .base import Api
-import socketio
 import time
+from typing import Dict
 
-class SocketServer:
+from middle_ware.redis import StreamMQ, StreamGroupProducer
+
+class ModelMQ:
     def __init__(self):
-        self.sio = socketio.Server(cors_allowed_origins='*')
-        
-        self.sio.on('connect', self.sio_connect)
-        self.sio.on('disconnect', self.sio_disconnect)
-        self.sio.on('register', self.sio_register)
-        self.sio.on('generate_finish', self.sio_generate_finish)
-        self.sio.on('generate_streaming', self.sio_generate_streaming)
-        self.sio.on('generate_stream_finish', self.sio_generate_stream_finish)
-        self.models = {}
-        self.response_tmp = {}
-        self.stream_tmp = {}
-        self.stream_finish = []
+        self.registerMQ = StreamMQ('register')
+        self.models: Dict[str, StreamMQ] = {}
 
-    def get_wgsiapp(self, wgsiapp):
-        return socketio.WSGIApp(self.sio, wgsiapp)
+    def get_models(self):
+        for message in self.registerMQ.read_all():
+            print(message)
+            if (key := message['register']) not in self.models:
+                self.models[key] = StreamGroupProducer(f'{key}_cmd')
+        return list(self.models.keys())
 
     def generate(self, cid, msg_list, model_id):
-        sid = self.models[model_id]
-        gen_id = f'{sid}{cid}{time.time()}'
-        self.sio.emit('generate', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
-        while gen_id not in self.response_tmp.keys():
-            time.sleep(0.1)
-        result = self.response_tmp.pop(gen_id)
+        gen_id = f'{cid}{time.time()}'
+        self.models[model_id].send({'gen_id': gen_id, 'msg_list': msg_list, 'cmd': 'generate'})
+        result = StreamMQ(f'{gen_id}_generate').read(block=1000_000_000)[0]['response']
         print(result)
         return result
 
     def generate_stream(self, cid, msg_list, model_id):
-        sid = self.models[model_id]
-        gen_id = f'{sid}{cid}{time.time()}'
-        self.stream_tmp[gen_id] = []
-        self.sio.emit('generate_stream', data={'gen_id': gen_id, 'msg_list': msg_list}, to=self.models[model_id])
-        while gen_id not in self.stream_finish or len(self.stream_tmp[gen_id]) > 0:
-            if len(self.stream_tmp[gen_id]) == 0:
-                continue
-            trunk = self.stream_tmp[gen_id].pop(0)
-            yield trunk
-        self.stream_tmp.pop(gen_id)
-        self.stream_finish.remove(gen_id)
+        gen_id = f'{cid}{time.time()}'
+        self.models[model_id].send({'gen_id': gen_id, 'msg_list': msg_list, 'cmd': 'generate_stream'})
 
-    @staticmethod
-    def sio_connect(sid, environ):
-        print(f'{sid} connect')
-
-    def sio_disconnect(self, sid):
-        print(f'{sid} disconnect')
-        for k, v in self.models.items():
-            if v == sid:
-                name = k
-                break
-        del self.models[name]
-
-    def sio_register(self, sid, data):
-        print(f'{sid} register {data}')
-        self.models[data['model_id']] = sid
-        self.sio.emit('registered', data=data['model_id'], to=sid)
-        
-    def sio_generate_finish(self, sid, data):
-        print(f'{sid} generate {data}')
-        self.response_tmp[data['gen_id']] = data['response']
-
-    def sio_generate_streaming(self, sid, data):
-        self.stream_tmp[data['gen_id']].append(data['response'])
-
-    def sio_generate_stream_finish(self, sid, data):
-        print(f'{sid} generate stream finish {data}')
-        self.stream_finish.append(data['gen_id'])
+        resultMQ = StreamMQ(f'{gen_id}_generate')
+        while (result := resultMQ.read(block=1000_000_000)[0])['status'] != 'finish':
+            print(result)
+            yield result['response']
 
 class Scir_Api(Api):
-    server = SocketServer()
+    server = ModelMQ()
+    server.get_models()
 
     def __init__(self, api) -> None:
         super().__init__()
 
     def _list_models(self):
-        print(list(self.server.models.keys()))
-        return list(self.server.models.keys())
+        model = self.server.get_models()
+        return model
 
     def _get_response(self, chat, model_id):
+        self.server.get_models()
         msg_list = [msg.to_role_dict() for msg in chat.get_msg_list()]
         return self.server.generate(chat.get_chat_id(), msg_list, model_id)
 
     def _get_response_stream(self, chat, model_id):
+        self.server.get_models()
         msg_list = [msg.to_role_dict() for msg in chat.get_msg_list()]
         return self.server.generate_stream(chat.get_chat_id(), msg_list, model_id)
