@@ -14,6 +14,7 @@ class WebSever:
         CORS(self.app, supports_credentials=True)
         self.server = data.Server()
         self.socket_server = Api.get_socket_server()
+        self.invite_code_manager = data.InviteCodeManager()
         self.app.secret_key = '123456'
 
         # 未登录可用
@@ -66,6 +67,14 @@ class WebSever:
         username = base64.b64decode(request.args.get('user')).decode('utf-8')
         if self.server.check_user_name_exist(username):
             return json.dumps('user_name_exist'), 200
+        # 邀请码检查
+        invite_code = base64.b64decode(request.args.get('ic')).decode('utf-8')
+        if self.invite_code_manager.validate_code(invite_code) == 0:
+            return json.dumps('invalid_invite_code'), 200
+        elif self.invite_code_manager.validate_code(invite_code) == -1:
+            return json.dumps('used_invite_code'), 200
+        else:
+            self.invite_code_manager.mark_code_as_used(invite_code)
         password = base64.b64decode(request.args.get('pd')).decode('utf-8')
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
         user = data.User(username, password_md5)
@@ -322,6 +331,8 @@ class WebSever:
         chat.sel_recv_msg(model_name)
         return json.dumps('success'), 200
 
+ws = WebSever()
+app = ws.app
 if __name__ == '__main__':
     # 启动服务器
     ws = WebSever()

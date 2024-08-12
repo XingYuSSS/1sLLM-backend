@@ -4,6 +4,8 @@ import time
 from .chat import Chat
 from .user import User
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
 class Server:
     """
@@ -25,7 +27,13 @@ class Server:
         从数据库中加载数据.
         """
         # 连接数据库
-        client = MongoClient('mongodb://localhost:27017')
+        load_dotenv()
+        username = os.getenv('MONGO_USERNAME')
+        password = os.getenv('MONGO_PASSWORD')
+        host = os.getenv('MONGO_HOST')
+        port = os.getenv('MONGO_PORT')
+        uri = f"mongodb://{username}:{password}@{host}:{port}"
+        client = MongoClient(uri)
         db = client['1sLLM']
         cursor = db['user'].find({})
         for raw_user_data in cursor:

@@ -1,8 +1,16 @@
 from typing import Any
 import pymongo
+from dotenv import load_dotenv
+import os
 
 class DB:
-    db = pymongo.MongoClient('mongodb://localhost:27017')['1sLLM']
+    load_dotenv()
+    username = os.getenv('MONGO_USERNAME')
+    password = os.getenv('MONGO_PASSWORD')
+    host = os.getenv('MONGO_HOST')
+    port = os.getenv('MONGO_PORT')
+    uri = f"mongodb://{username}:{password}@{host}:{port}"
+    db = pymongo.MongoClient(uri)['1sLLM']
     
     def __init__(self, set_name=None, db_id=None, db_dict=None, tmp=False) -> None:
         if set_name is None:
