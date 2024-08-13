@@ -32,7 +32,11 @@ class Server:
         password = os.getenv('MONGO_PASSWORD')
         host = os.getenv('MONGO_HOST')
         port = os.getenv('MONGO_PORT')
-        uri = f"mongodb://{username}:{password}@{host}:{port}"
+        if username == '' or password == '':
+            uri = f"mongodb://{host}:{port}"
+        else:
+            uri = f"mongodb://{username}:{password}@{host}:{port}"
+        print(uri)
         client = MongoClient(uri)
         db = client['1sLLM']
         cursor = db['user'].find({})

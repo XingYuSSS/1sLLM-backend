@@ -103,7 +103,6 @@ class WebSever:
         if sms_code != self.tmp_sms_code[phone]:
             return json.dumps('invalid_sms_code'), 200
         del self.tmp_sms_code[phone]
-        
         password = base64.b64decode(request.args.get('pd')).decode('utf-8')
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
         user = data.User(username, password_md5, phone)

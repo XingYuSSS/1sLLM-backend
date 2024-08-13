@@ -9,7 +9,10 @@ class DB:
     password = os.getenv('MONGO_PASSWORD')
     host = os.getenv('MONGO_HOST')
     port = os.getenv('MONGO_PORT')
-    uri = f"mongodb://{username}:{password}@{host}:{port}"
+    if username == '' or password == '':
+        uri = f"mongodb://{host}:{port}"
+    else:
+        uri = f"mongodb://{username}:{password}@{host}:{port}"
     db = pymongo.MongoClient(uri)['1sLLM']
     
     def __init__(self, set_name=None, db_id=None, db_dict=None, tmp=False) -> None:
