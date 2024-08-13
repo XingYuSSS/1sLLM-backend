@@ -108,4 +108,4 @@ class Server:
         """
         删除session_dict.
         """
-        self._session_dict.pop(key)
+        self._session_dict.pop(key, None)

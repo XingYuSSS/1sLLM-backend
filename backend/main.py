@@ -1,12 +1,23 @@
 import base64
 import hashlib
 import json
+import random
+import re
 import data
 from api.base import Api
 from flask import Flask, request, session, redirect, Response
 from flask_cors import CORS
 import socketio
 import time
+from dotenv import load_dotenv
+import os
+
+import json
+from tencentcloud.common import credential
+from tencentcloud.common.profile.client_profile import ClientProfile
+from tencentcloud.common.profile.http_profile import HttpProfile
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+from tencentcloud.sms.v20210111 import sms_client, models
 
 class WebSever:
     def __init__(self):
@@ -17,12 +28,23 @@ class WebSever:
         self.invite_code_manager = data.InviteCodeManager()
         self.app.secret_key = '123456'
 
+        load_dotenv()
+        self.TencentConfig = {
+            "SecretId": os.getenv('TENCENT_SECRET_ID'),
+            "SecretKey": os.getenv('TENCENT_SECRET_KEY'),
+            "TemplateId": os.getenv('TENCENT_TEMPLATE_ID'),
+            "SignName": os.getenv('TENCENT_SIGN_NAME'),
+            "SmsSdkAppId": os.getenv('TENCENT_SMS_SDK_APP_ID')
+        }
+        self.tmp_sms_code = {}
+
         # 未登录可用
         self.app.add_url_rule('/', view_func=self.index)
         self.app.add_url_rule('/api/providers', view_func=self.api_providers)
         self.app.add_url_rule('/user/exist', view_func=self.user_exist)
         self.app.add_url_rule('/user/register', view_func=self.user_register)
         self.app.add_url_rule('/user/login', view_func=self.user_login)
+        self.app.add_url_rule('/sms/code', view_func=self.sms_code_get)
         # 登录后可用
         self.app.add_url_rule('/user/logout', view_func=self.user_logout)
         self.app.add_url_rule('/api/models', view_func=self.api_models)
@@ -75,9 +97,16 @@ class WebSever:
             return json.dumps('used_invite_code'), 200
         else:
             self.invite_code_manager.mark_code_as_used(invite_code)
+        # 短信验证码检查
+        sms_code = base64.b64decode(request.args.get('sc')).decode('utf-8')
+        phone = base64.b64decode(request.args.get('phone')).decode('utf-8')
+        if sms_code != self.tmp_sms_code[phone]:
+            return json.dumps('invalid_sms_code'), 200
+        del self.tmp_sms_code[phone]
+        
         password = base64.b64decode(request.args.get('pd')).decode('utf-8')
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
-        user = data.User(username, password_md5)
+        user = data.User(username, password_md5, phone)
         self.server.add_user(user)
         return json.dumps('success'), 200
 
@@ -92,6 +121,8 @@ class WebSever:
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
         # 检查用户名密码
         print(f'Login: {username}, {password}')
+        if not self.server.check_user_name_exist(username):
+            return json.dumps('invalid_username_or_password'), 401
         if self.server.get_password_md5(username) != password_md5:
             return json.dumps('invalid_username_or_password'), 401
         # 服务器上记录会话信息
@@ -112,6 +143,49 @@ class WebSever:
         session.pop('username')
         session.pop('session_id')
         self.server.pop_session_dict(username)
+        return json.dumps('success'), 200
+
+    def sms_code_get(self):
+        """
+        获取短信验证码.
+        """
+        phone = base64.b64decode(request.args.get('phone')).decode('utf-8')
+        if not re.match(r'^1[3456789]\d{9}$', phone):
+            return json.dumps('invalid_phone'), 200
+        sms_code = str(random.randint(100000, 999999))
+        # TODO: 发送短信
+        while True:
+            try:
+                cred = credential.Credential(self.TencentConfig["SecretId"], self.TencentConfig["SecretKey"])
+                httpProfile = HttpProfile()
+                httpProfile.endpoint = "sms.tencentcloudapi.com"
+                clientProfile = ClientProfile()
+                clientProfile.httpProfile = httpProfile
+                client = sms_client.SmsClient(cred, "ap-beijing", clientProfile)
+
+                req = models.SendSmsRequest()
+                params = {
+                    "PhoneNumberSet": [
+                        phone
+                    ],
+                    "SmsSdkAppId": self.TencentConfig["SmsSdkAppId"],
+                    "TemplateId": self.TencentConfig["TemplateId"],
+                    "SignName": self.TencentConfig["SignName"],
+                    "TemplateParamSet.N": [
+                        sms_code
+                    ]
+                }
+                req.from_json_string(json.dumps(params))
+
+                resp = client.SendSms(req)
+                print(resp.to_json_string())
+                break
+
+            except TencentCloudSDKException as err:
+                print(err)
+                time.sleep(1)
+
+        self.tmp_sms_code[phone] = sms_code
         return json.dumps('success'), 200
 
     def api_providers(self):

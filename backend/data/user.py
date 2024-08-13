@@ -11,13 +11,14 @@ class User(DB):
         available_models: 服务商名-支持的模型列表
     """
 
-    def __init__(self, username=None, password=None, api_dict={}, chat_dict={}, available_models={}, tmp=False):
+    def __init__(self, username=None, password=None, phone=None, api_dict={}, chat_dict={}, available_models={}, tmp=False):
         super().__init__(
             set_name='user', 
             db_id=username,
             db_dict={
                 'username': username,
                 'password': password,
+                'phone': phone,
                 'api_dict': api_dict,
                 'chat_dict': chat_dict,
                 'available_models': available_models
@@ -33,6 +34,7 @@ class User(DB):
         return {
             'username': obj.get_username(),
             'password': obj.get_password(),
+            'phone': obj.get_phone(),
             'api_dict': obj.get_api_dict(),
             'chat_dict': {k: Chat._to_db_dict(v) for k, v in obj.get_chat_dict().items()},
             'available_models': obj.get_available_models()
@@ -42,6 +44,7 @@ class User(DB):
     def _from_db_dict(db_dict: dict) -> None:
         username = db_dict['username']
         password = db_dict['password']
+        phone = db_dict['phone']
         api_dict = db_dict['api_dict']
         chat_dict = {k: Chat._from_db_dict(v) for k, v in db_dict['chat_dict'].items()}
         available_models = db_dict['available_models']
@@ -49,6 +52,7 @@ class User(DB):
         return {
             'username': username,
             'password': password,
+            'phone': phone,
             'api_dict': api_dict,
             'chat_dict': chat_dict,
             'available_models': available_models
@@ -59,6 +63,9 @@ class User(DB):
 
     def get_password(self):
         return self.get('password')
+    
+    def get_phone(self):
+        return self.get('phone')
 
     def get_available_models(self):
         return self.get('available_models')
