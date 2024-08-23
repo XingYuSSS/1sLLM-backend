@@ -11,13 +11,14 @@ import socketio
 import time
 from dotenv import load_dotenv
 import os
+import requests
 
 import json
-from tencentcloud.common import credential
-from tencentcloud.common.profile.client_profile import ClientProfile
-from tencentcloud.common.profile.http_profile import HttpProfile
-from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-from tencentcloud.sms.v20210111 import sms_client, models
+# from tencentcloud.common import credential
+# from tencentcloud.common.profile.client_profile import ClientProfile
+# from tencentcloud.common.profile.http_profile import HttpProfile
+# from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+# from tencentcloud.sms.v20210111 import sms_client, models
 
 class WebSever:
     def __init__(self):
@@ -35,6 +36,11 @@ class WebSever:
             "TemplateId": os.getenv('TENCENT_TEMPLATE_ID'),
             "SignName": os.getenv('TENCENT_SIGN_NAME'),
             "SmsSdkAppId": os.getenv('TENCENT_SMS_SDK_APP_ID')
+        }
+        self.GuoYangCloud_Config = {
+            "appcode": os.getenv("GUOYANG_APPCODE"),
+            "smsSignId": os.getenv("GUOYANG_SIGNID"),
+            "templateId": os.getenv("GUOYANG_TEMPLATEID")
         }
         self.tmp_sms_code = {}
 
@@ -114,6 +120,7 @@ class WebSever:
         """
         登录.
         """
+        print("someone trying to login")
         username = base64.b64decode(request.args.get('user')).decode('utf-8')
         password = base64.b64decode(request.args.get('pd')).decode('utf-8')
         if username is None or password is None:
@@ -149,39 +156,35 @@ class WebSever:
         """
         获取短信验证码.
         """
+        # raise Exception("byd")
         phone = base64.b64decode(request.args.get('phone')).decode('utf-8')
         if not re.match(r'^1[3456789]\d{9}$', phone):
             return json.dumps('invalid_phone'), 200
         sms_code = str(random.randint(100000, 999999))
-        # TODO: 发送短信
+        # print("#########################")
+        # print("sms code:", sms_code)
+        # print("phone: ", phone )
+        url = "https://gyytz.market.alicloudapi.com/sms/smsSend"
+
+        appcode = self.GuoYangCloud_Config["appcode"]
+        smsSignId = self.GuoYangCloud_Config["smsSignId"]
+        templateId = self.GuoYangCloud_Config["templateId"]
+
+        param = f'**code**:{sms_code},**minute**:5'
+        
         while True:
             try:
-                cred = credential.Credential(self.TencentConfig["SecretId"], self.TencentConfig["SecretKey"])
-                httpProfile = HttpProfile()
-                httpProfile.endpoint = "sms.tencentcloudapi.com"
-                clientProfile = ClientProfile()
-                clientProfile.httpProfile = httpProfile
-                client = sms_client.SmsClient(cred, "ap-beijing", clientProfile)
+                headers = {"Content-Type":"application/x-www-form-urlencoded","Authorization":"APPCODE "+appcode}
+                data = {"mobile":phone,"smsSignId":smsSignId,"templateId":templateId,"param":param}
+                response = requests.post(url, headers = headers, params = data)
+                if response.status_code == 200:
+                    print("发送成功")
+                    break
+                else:
+                    raise Exception(f"调用验证码失败,状态码{response.status_code}")
 
-                req = models.SendSmsRequest()
-                params = {
-                    "PhoneNumberSet": [
-                        phone
-                    ],
-                    "SmsSdkAppId": self.TencentConfig["SmsSdkAppId"],
-                    "TemplateId": self.TencentConfig["TemplateId"],
-                    "SignName": self.TencentConfig["SignName"],
-                    "TemplateParamSet.N": [
-                        sms_code
-                    ]
-                }
-                req.from_json_string(json.dumps(params))
 
-                resp = client.SendSms(req)
-                print(resp.to_json_string())
-                break
-
-            except TencentCloudSDKException as err:
+            except Exception as err:
                 print(err)
                 time.sleep(1)
 
