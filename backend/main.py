@@ -101,8 +101,6 @@ class WebSever:
             return json.dumps('invalid_invite_code'), 200
         elif self.invite_code_manager.validate_code(invite_code) == -1:
             return json.dumps('used_invite_code'), 200
-        else:
-            self.invite_code_manager.mark_code_as_used(invite_code)
         # 短信验证码检查
         sms_code = base64.b64decode(request.args.get('sc')).decode('utf-8')
         phone = base64.b64decode(request.args.get('phone')).decode('utf-8')
@@ -114,6 +112,9 @@ class WebSever:
         password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
         user = data.User(username, password_md5, phone)
         self.server.add_user(user)
+
+        # 最后标记邀请码
+        self.invite_code_manager.mark_code_as_used(invite_code)
         return json.dumps('success'), 200
 
     def user_login(self):
