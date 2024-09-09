@@ -1,0 +1,445 @@
+openapi: 3.0.0
+info:
+  title: qiaoban
+  version: 0.1.0
+paths:
+  /api/providers:
+    get:
+      summary: Api Providers
+      description: 获取全局支持的服务商.
+      operationId: api_providers_api_providers_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: array
+                items: 
+                  type: string
+                  description: 服务商名称
+  /user/exist:
+    get:
+      summary: User Exist
+      description: 检查用户是否存在.
+      operationId: user_exist_user_exist_get
+      parameters:
+        - name: user
+          in: query
+          required: true
+          schema:
+            type: string
+            title: User
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              example: 
+                - 'user_name_exist'
+                - 'user_name_not_exist'
+              schema: 
+                type: string
+  /user/register:
+    get:
+      summary: User Register
+      description: 注册.
+      operationId: user_register_user_register_get
+      parameters:
+        - name: user
+          description: 用户名
+          in: query
+          required: true
+          schema:
+            type: string
+            title: User
+        - name: ic
+          description: 邀请码
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Ic
+        - name: sc
+          description: 短信验证码
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Sc
+        - name: phone
+          description: 手机号
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Phone
+        - name: pd
+          description: 密码
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Pd
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+              example: 
+               - user_name_exist
+               - invalid_invite_code
+               - used_invite_code
+               - invalid_sms_code
+               - success
+  /sms/code:
+    get:
+      summary: Get Sms Code
+      description: 获取短信验证码.
+      operationId: sms_code
+      parameters:
+        - name: phone
+          description: 手机号
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Phone
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+              example: 
+               - invalid_phone
+               - success
+  /user/login:
+    get:
+      summary: User Login
+      description: 登录.
+      operationId: user_login_user_login_get
+      parameters:
+        - name: user
+          in: query
+          required: true
+          schema:
+            type: string
+            title: User
+        - name: pd
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Pd
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                  session_id:
+                    type: string
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                type: string
+                example: invalid_username_or_password
+  /user/logout:
+    get:
+      summary: User Logout
+      description: 登出.
+      operationId: user_logout_user_logout_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+                example: 'success'
+        '403':
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                type: string
+                example: invalid_username
+  /chat/list:
+    get:
+      summary: Chat List
+      description: 获取聊天记录列表.
+      operationId: chat_list_chat_list_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: object
+                example: 
+                  cid1: 
+                    chat_id: cid1
+                    chat_title: hello
+                    msg_list: 
+                      - {role: user, name: xiaoming, content: hello}
+                      - {role: assistant, name: 巧板, content: 'hello, too'}
+        '403':
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                type: string
+                example: invalid_user
+  /chat/new:
+    get:
+      summary: Chat New
+      description: 新建聊天记录.
+      operationId: chat_new_chat_new_get
+      parameters:
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Title
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+                example: 'cid1'
+        '403':
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                type: string
+                example: invalid_user
+  /chat/get:
+    get:
+      summary: Chat Get
+      description: 获取聊天记录.
+      operationId: chat_get_chat_get_get
+      parameters:
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Cid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  chat_id: 
+                    type: string
+                  chat_title:
+                    type: string
+                  msg_list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        role: 
+                          type: string
+                        name:
+                          type: string
+                        content:
+                          type: string
+              example:
+                chat_id: cid1
+                chat_title: hello
+                msg_list: 
+                  - {role: user, name: xiaoming, content: hello}
+                  - {role: assistant, name: 巧板, content: 'hello, too'}
+        '403':
+          description: 未登录或无效cid
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - invalid_user
+                  - invalid_chat_id
+  /chat/title:
+    get:
+      summary: Chat Title
+      description: 更新聊天记录标题.
+      operationId: chat_title_chat_title_get
+      parameters:
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Cid
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Title
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+                example: success
+        '403':
+          description: 未登录或无效cid
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - invalid_user
+                  - invalid_chat_id
+  /chat/del:
+    get:
+      summary: Chat Del
+      description: 删除聊天记录.
+      operationId: chat_del_chat_del_get
+      parameters:
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Cid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: string
+                example: success
+        '403':
+          description: 未登录或无效cid
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - invalid_user
+                  - invalid_chat_id
+  /chat/gen:
+    get:
+      summary: Chat Gen
+      description: 生成聊天回复.
+      operationId: chat_gen_chat_gen_get
+      parameters:
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Cid
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+            title: P
+        - name: provider_models
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Provider Models
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  巧板: 
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        example: assistant
+                      name:
+                        type: string
+                        example: 巧板
+                      msg: 
+                        type: string
+                        example: hello
+        '403':
+          description: 未登录/无效cid/无效输入
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - invalid_user
+                  - invalid_chat_id
+                  - invalid_prompt
+  /chat/gen/stream:
+    get:
+      summary: Chat Gen Stream
+      description: 流式生成聊天回复.
+      operationId: chat_gen_stream_chat_gen_stream_get
+      parameters:
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Cid
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+            title: P
+        - name: provider_models
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Provider Models
+      responses:
+        '200':
+          description: 流式传输，每个json使用\n分割
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  model:
+                    type: string
+                    example: 巧板
+                  msg: 
+                    type: string
+                    example: hello
+        '403':
+          description: 未登录/无效cid/无效输入
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - invalid_user
+                  - invalid_chat_id
+                  - invalid_prompt
